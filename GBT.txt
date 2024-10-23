@@ -1,0 +1,60 @@
+import json
+from System.Text import Encoding
+
+# Функция для чтения JSON файла
+def read_json_file(file_path):
+    # Открываем файл в бинарном режиме
+    with open(file_path, "rb") as source_file:
+        # Читаем содержимое файла
+        byte_content = source_file.read()
+        # Декодируем содержимое в UTF-8
+        decoded_content = byte_content.decode('utf-8')
+        # Загружаем данные JSON
+        return json.loads(decoded_content)
+
+# Функция для записи JSON файла
+def write_json_file(file_path, data):
+    # Кодируем данные в JSON с ensure_ascii=False
+    json_content = json.dumps(data, ensure_ascii=False, indent=4)
+    # Открываем файл в бинарном режиме для записи
+    with open(file_path, "wb") as jsonFile:
+        # Записываем закодированные данные
+        jsonFile.write(json_content.encode('utf-8'))
+
+# Исходные данные
+properties_types = IN[0]
+properties_names = IN[1]
+objects2ifc_types = IN[2]
+json_qset_type_path = IN[3]
+
+# Читаем JSON файл
+json_out = read_json_file(json_qset_type_path)
+
+# Обработка данных
+for property_id_str, to_objects in properties_types.items():
+    prop_index = IN[4].index(property_id_str)
+    property_name = properties_names[prop_index]
+    ifc_types_list = list()
+    
+    for one_applied_object_category_guid in to_objects:
+        one_applied_object_category = str(one_applied_object_category_guid)
+        ifc_types_list_one = objects2ifc_types[one_applied_object_category]
+        
+        for ifc_type_one in ifc_types_list_one:
+            if ifc_type_one not in ifc_types_list:
+                json_ifc_to_that_group = json_out.get(ifc_type_one, None)
+                if json_ifc_to_that_group is not None:
+                    json_psets = json_ifc_to_that_group.get("psets", None)
+                    if json_psets is not None:
+                        json_pset_common = json_psets.get("Pset_properties", None)
+                        if json_pset_common is None:
+                            json_psets["Pset_properties"] = dict()
+                            json_pset_common = json_psets["Pset_properties"]
+                        check_exist_property = json_pset_common.get(property_name, None)
+                        if check_exist_property is None:
+                            json_pset_common[property_name] = "{" + str(property_id_str) + "}"
+
+# Записываем изменения в новый JSON файл
+write_json_file(json_qset_type_path.replace(".json", "_1.json"), json_out)
+
+OUT = 0
